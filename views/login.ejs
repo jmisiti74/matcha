@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Matcha - Connexion</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="stylesheet" type="text/css" href="css/theme.css">
+	</head>
+	<body>
+		<div class="container-fluid">
+			<%- include includes/header.ejs %>
+			<div class="text-center">
+				<h1>Se connecter : </h1>
+				<form action="/login" method="POST">
+					Mail : <br>
+					<input type="text" name="mail" value="test@test.fr"><br><br>
+					<input type="submit" value="Se connecter">
+				</form>
+			</div>
+			<%- include includes/footer.ejs %>
+		</div>
+
+
+		<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+		<script>
+			/*var socket = io.connect('http://localhost:8080');
+
+			// On demande le pseudo au visiteur...
+			var pseudo = prompt('Quel est votre pseudo ?');
+			// Et on l'envoie avec le signal "petit_nouveau" (pour le différencier de "message")
+			socket.emit('petit_nouveau', pseudo);
+
+			// On affiche une boîte de dialogue quand le serveur nous envoie un "message"
+			socket.on('message', function(message) {
+				alert('Le serveur a un message pour vous : ' + message);
+			})*/
+
+			// Lorsqu'on clique sur le bouton, on envoie un "message" au serveur
+			$('#poke').click(function () {
+				socket.emit('email', 'xjejevbx@gmail.com');
+			})
+		</script>
+	</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Matcha",
+  "version": "0.1.0",
+  "dependencies": {
+    "body-parser": "~1.17.1",
+    "ejs": "~2.1.4",
+    "express": "~4.11.0",
+    "express-session": "~1.15.2",
+    "mysql": "~2.13.0",
+    "socket.io": "~1.7.3",
+    "utf8": "~2.1.2"
+  },
+  "license": "BSD-3-Clause",
+  "author": "jmisiti <jmisiti@student.42.fr>",
+  "description": "Une application de rencontre"
+}
