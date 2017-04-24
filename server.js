@@ -1,6 +1,6 @@
 var http		= require('http'),
 	mysql		= require('mysql'),
-	connection	= mysql.createConnection({host:'localhost', user: 'root', password : 'root' }),
+	connection	= mysql.createConnection({host:'localhost', user: 'root', password : '' }),
 	express		= require('express'),
 	session		= require('express-session'),
 	bodyParser	= require('body-parser'),
@@ -63,6 +63,7 @@ app.get('/login', function(req, res) {
 
 app.post('/login', function(req, res) {
 	sess = sess ? sess : req.session;
+	connection.query('SELECT * FROM users WHERE mail = "' + connection.escape(req.body.mail) + '" AND passwd = "' + connection.escape(req.body.passwd) + '"')
     sess.mail = connection.escape(req.body.mail);
     res.charset = 'utf-8';
 	res.redirect('/?type=ok&msg=' + utf8.encode("Vous êtes maintenant connecté."));
@@ -83,17 +84,22 @@ app.post('/signin', function(req, res) {
     connection.query('SELECT COUNT(*) AS count FROM users WHERE mail = "' + connection.escape(req.body.mail) + '";', function (error, results, fields) {
     	if (results[0].count == 0)
     	{
-			sess.mail = connection.escape(req.body.mail);
-			sess.passwd = connection.escape(req.body.passwd);
-			connection.query('INSERT INTO users (mail, passwd) VALUES ("'+ sess.mail + '", "' + sess.passwd + '");', function (error, results, fields) {
-				if (error)
-					res.redirect('/?type=error&msg=' + utf8.encode(error.code));
-				else
-					res.redirect('/?type=ok&msg=' + utf8.encode("Votre compte a bien été crée."));
-			});
+			if (checkParams(req.body) != true)
+				res.redirect('/?type=error&msg=' + utf8.encode(checkParams(req.body)));
+			else
+			{
+				sess.mail = connection.escape(req.body.mail);
+				sess.passwd = connection.escape(req.body.passwd);
+				connection.query('INSERT INTO users (mail, passwd) VALUES ('+ sess.mail + ', ' + sess.passwd + ');', function (error, results, fields) {
+					if (error)
+						res.redirect('/?type=error&msg=' + utf8.encode(error.code));
+					else
+						res.redirect('/?type=ok&msg=' + utf8.encode("Votre compte a bien été crée."));
+				});
+			}
     	}
     	else
-    		res.redirect('/?type=error&msg=' + utf8.encode("Un compte utilise déjà cette e-mail."));
+    		res.redirect('/signin?type=error&msg=' + utf8.encode("Un compte utilise déjà cette e-mail."));
     });
 });
 
@@ -116,3 +122,20 @@ io.sockets.on('connection', function (socket) {
         console.log(socket.pseudo + ' me parle ! Il me dit : ' + message);
     }); 
 });
+
+function validateEmail(email) {
+	var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+	return re.test(email);
+}
+
+function checkParams(params)
+{
+	if (params.passwd.length < 8)
+		return ("Votre mot de passe est trop court, 8 caractères minimum.");
+	else if (params.passwd != params.spasswd)
+		return ("Vos mots de passes doivent correspondre.");
+	else if (!validateEmail(params.mail))
+		return ("Veuillez entrer un e-mail valide");
+	else
+		return (true);
+}
