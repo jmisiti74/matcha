@@ -28,67 +28,37 @@
 		<script src="/socket.io/socket.io.js"></script>
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 		<script>
-			$(function() {
-					var socket = io.connect('http://localhost:8080');
-					if ("geolocation" in navigator) {
-						navigator.geolocation.getCurrentPosition(positionSuccess, positionError, { enableHighAccuracy: true });
-					}
-					else
-						console.log("oops");
-					$(window).focus(function() {
-						navigator.geolocation.getCurrentPosition(positionSuccess, positionError, { enableHighAccuracy: true });
-					});
+			var socket = io.connect('http://localhost:8888');
 
-					function positionSuccess(position) {
-						var lat = position.coords.latitude;
-						var lng = position.coords.longitude;
-						var acr = position.coords.accuracy;
-						var datas = {
-							id: "<%= mail %>",
-							lat: lat,
-							lng: lng
-						}
-						console.log(lat);
-						console.log(lng);
-						console.log(getDistance(49.8986514, 2.2145975, 35.6735408, 139.570302) + "km");
-						socket.emit('datas:send', datas);
-					}
-
-					function positionError(error) {
-						var errors = {
-							1: "Authorization fails", // permission denied
-							2: "Can\'t detect your location", //position unavailable
-							3: "Connection timeout" // timeout
-						};
-						console.log("Error: " + errors[error.code]);
-					}
-						
-
-					/* Récuperation de la distance entre notre position et la position de l'autre */
-					function getDistance(lat1, lon1, lat2, lon2) {
-						var aToR = Math.PI / 180;
-						var lo1 = lon1 * aToR;
-						var lo2 = lon2 * aToR;
-						var la1 = lat1 * aToR;
-						var la2 = lat2 * aToR;
-						return (6371 * (Math.acos(Math.sin(la1) * Math.sin(la2) + Math.cos(la1) * Math.cos(la2) * Math.cos(lo2 - lo1))));
-					}
+			askMatchs();
+			function askMatchs(){
+				socket.emit('didIMatch');
+				socket.emit('didIVisit');
+				socket.emit('didIChat');
+			}
+			setInterval(askMatchs, 5000);
+			socket.on('matchs', function(count) {
+				if (count > 0) {
+					$(".count").html(count);
+					$(".cnt").html(".");
+					$(".anticount").hide();
+				}
 			});
-			/*
 
-			// On demande le pseudo au visiteur...
-			var pseudo = prompt('Quel est votre pseudo ?');
-			// Et on l'envoie avec le signal "petit_nouveau" (pour le différencier de "message")
-
-			// On affiche une boîte de dialogue quand le serveur nous envoie un "message"
-			socket.on('message', function(message) {
-				alert('Le serveur a un message pour vous : ' + message);
-			})
-
-			// Lorsqu'on clique sur le bouton, on envoie un "message" au serveur
-			$('#poke').click(function () {
-				socket.emit('message', 'Salut serveur, ça va ?');
-			})*/
+			socket.on('chated', function(count) {
+				if (count > 0) {
+					$(".countchated").html(count);
+					$(".cnt").html(".");
+					$(".anticount").hide();
+				}
+			});
+			socket.on('visited', function(count) {
+				if (count > 0) {
+					$(".cnt").html(".");
+					$(".anticount").hide();
+					$(".countvisited").html(count);
+				}
+			});
 		</script>
 	</body>
 </html>

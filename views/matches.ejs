@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Matcha - Matches</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="stylesheet" type="text/css" href="css/theme.css">
+	</head>
+	<body>
+		<div class="container-fluid">
+			<%- include includes/header.ejs %>
+			<div class="main_section">
+				<div class="container">
+					<div class="chat_container">
+						<div class="col-sm-3 chat_sidebar">
+							<div class="row">
+								<div class="dropdown all_conversation">
+									<button class="dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+										<i class="fa fa-weixin" aria-hidden="true"></i>
+										Vos matchs
+									</button>
+								</div>
+								<div class="member_list">
+									<ul id="ulist" class="list-unstyled">
+									</ul>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-9 message_section">
+							<div class="row">
+								<div id="chat_scroll" class="chat_area">
+									<ul id="chat_zone" class="list-unstyled">
+									</ul>
+								</div>
+								<div class="message_write">
+									<textarea id="message-zone" class="form-control" placeholder="type a message"></textarea>
+									<div class="clearfix"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<%- include includes/footer.ejs %>
+		</div>
+		<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+		<script src="https://use.fontawesome.com/45e03a14ce.js"></script>
+		<script src="/javascript/moment.js"></script>
+		<script>
+			var socket = io.connect('http://localhost:8888');
+			var idactuel;
+
+			function ScrollBot()
+			{
+				$('#chat_scroll').animate({
+					scrollTop: $('#chat_scroll').get(0).scrollHeight
+				}, 1500);
+			}
+
+			function wishSexe(sendersexe)
+			{
+				if (sendersexe == "F")
+					return ("logof.png");
+				else
+					return ("logoh.png");
+			}
+
+			setTimeout(function(){
+				socket.emit('needMatches');
+			}, 1000);
+			socket.on('matches', function(matches) {
+				matches.forEach(function(match) {
+					$('#ulist').append('<li onclick="getMsg(this.id);" id="' + match.id + '" class="hoverstyle left clearfix">' + ((match.sexe == "H") ? '<span class="chat-img pull-left"><img height="31" width="31" src="logoh.png" alt="User Avatar" class="img-circle">' : '<span class="chat-img pull-left"><img height="31" width="31" src="logof.png" alt="User Avatar" class="img-circle">') + '</span><div class="chat-body clearfix"><div class="header_sec"><strong class="primary-font">' + match.firstname + ' ' + match.name + '</strong> <span class="couunntt badge"></span></div></div></li>');
+					socket.emit("nvxMsg", match.id);
+				});
+			});
+
+			socket.on('msglst', function (params)
+			{
+				$('#' + params.uid + " .couunntt").html(params.count);
+				console.log('#' + params.uid + ".couunntt");
+			});
+
+			$("#message-zone").focus(function() {
+				ScrollBot();
+			});
+
+			$(document).keypress(function(e) {
+				if(e.which == 13) {
+					if ($("#message-zone").val() != "" && idactuel)
+					{
+						socket.emit('newMsg', { receiver: idactuel, msg: $("#message-zone").val() });
+						$("#message-zone").val('').blur();
+						socket.emit('needChat', idactuel);
+						ScrollBot();
+					}
+				}
+			});
+
+			socket.on('chat', function(chat) {
+				$("#chat_zone").html("");
+				var i = 0;
+				var ok = 0;
+				if (chat)
+				{
+					chat.forEach(function(message) {
+						d = new Date(message.time);
+						if (message.senderid != <%= muid %>)
+						{
+							if (ok == 0)
+							{
+								ok = 1;
+								socket.emit('vue', message.senderid);
+							}
+							$("#chat_zone").append('<li class="left clearfix"><span class="chat-img1 pull-left"><img src="' + wishSexe(message.sendersexe) + '" alt="User Avatar" class="img-circle"></span><b>&nbsp;' + message.sendername + '</b><div class="chat-body1 clearfix"><p>' + message.message + '</p><div class="chat_time pull-right">' + moment(d, "YYYY-MM-DD hh:mm:ss").fromNow() + '</div></div></li>');
+						}
+						else
+							$("#chat_zone").append('<li class="left clearfix admin_chat"><b>' + message.sendername + '</b><span class="chat-img1 pull-right"><img src="' + wishSexe(message.sendersexe) + '" alt="User Avatar" class="img-circle"><br /></span><div class="chat-body1 clearfix"><p>' + message.message + '</p><div class="chat_time pull-left">' + moment(d, "YYYY-MM-DD hh:mm:ss").fromNow() + '</div></div></li>');
+					});
+					ScrollBot();
+				}
+			});
+			askMatchs();
+			function askMatchs(){
+				socket.emit('didIMatch');
+				socket.emit('didIVisit');
+				socket.emit('didIChat');
+			}
+
+			socket.on('chated', function(count) {
+				if (count > 0) {
+					$(".countchated").html(count);
+					$(".cnt").html(".");
+					$(".anticount").hide();
+				}
+			});
+			setInterval(askMatchs, 5000);
+			function getMsg(id)
+			{
+				idactuel = id;
+				socket.emit('needChat', id);
+			}
+		</script>
+	</body>
+</html>
