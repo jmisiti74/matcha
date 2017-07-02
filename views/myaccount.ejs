@@ -36,7 +36,7 @@
 							Femme - <input type="radio" class="sexe" name="sexe" value="F"><br>
 						<% } %>
 						<br />
-						<b>Sexe rechercher</b> : <br>
+						<b>Sexe recherché</b> : <br>
 						<% if (orientation == "F") { %>
 							Homme - <input type="radio" name="orientation" value="H"><br>
 							Femme - <input type="radio" name="orientation" value="F" checked><br>
@@ -51,9 +51,9 @@
 							Les deux - <input type="radio" name="orientation" value="" checked><br>
 						<% } %>
 						<br />
-						<b>Décriver vous</b> : <br>
+						<b>Décrivez vous</b> : <br>
 						<textarea style="max-width: 180px; min-height: 100px;" name="description" id="description"><%- description %></textarea><br><br>
-						Des centres d'intérêts (Séparer par des virgules) : <br>
+						Des centres d'intérêts (Séparé par des virgules) : <br>
 						<input type="text" id="tags" name="tags" placeholder="musique, fraise, chat"><br><br>
 						<input id="button" type="submit" value="Valider"><br><br><br>
 					</form>

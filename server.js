@@ -70,7 +70,7 @@ connection.query('CREATE TABLE IF NOT EXISTS messages(id INT AUTO_INCREMENT PRIM
 	if (error)
 		throw error;
 	else
-		console.log("\033[0;32mTable messages crée.\n\033[0;34mSite : localhost:8888");
+		console.log("\033[0;32mTable messages crée.\n\033[0;34mSite : localhost:8888\033[0;40m");
 });
 var sess,
 	passedVariable;
@@ -95,16 +95,16 @@ app.post('/newpwd', function(req, res) {
 		var transporter = nodemailer.createTransport({
 			service: 'Gmail',
 			auth: {
-				user: 'xjejevbx@gmail.com', // Your email id
-				pass: 'qlznualewqzjvzmo' // Your password
+				user: 'xjejevbx@gmail.com',
+				pass: 'qlznualewqzjvzmo'
 			}
 		});
 		var newpwd = generatePwd();
 		var mailOptions = {
-			from: 'xjejevbx@gmail.com', // sender address
-			to: req.body.mail, // list of receivers
-			subject: 'Password reset', // Subject line
-			html: 'Votre mot de passe a bien été re-initialiser ✔.<BR />Voici votre nouveau mot de passe : </BR><b>' + newpwd + '</b>' // You can choose to send an HTML body instead
+			from: 'xjejevbx@gmail.com',
+			to: req.body.mail,
+			subject: 'Password reset',
+			html: 'Votre mot de passe a bien été re-initialiser ✔.<BR />Voici votre nouveau mot de passe : </BR><b>' + newpwd + '</b>'
 		};
 		transporter.sendMail(mailOptions, function(error, info){
 			if(error)
@@ -139,28 +139,55 @@ app.get('/match', function(req, res) {
 app.get('/matches', function(req, res) {
 	res.charset = 'utf-8';
 	sess = sess ? sess : req.session;
+	var mymatch = null;
+	var done = null;
 	sess.matchs = new Array();
 	if (sess && sess.mail)
 	{
 		connection.query('SELECT * FROM matchs WHERE uidlike = ? AND mort = 0;', [sess.uid], function (e, r, f) {
 			if (r[0]) {
-				r.forEach(function(elem) {
-					connection.query('SELECT * FROM matchs WHERE uidlike = ? AND uidliked = ? AND mort = 0;', [elem.uidliked, sess.uid], function (err, res, fie) {
-						if (res[0])
-						{
-							connection.query('SELECT * FROM users WHERE id = ?;', [elem.uidliked], function (error, result, field) {
-								if (result[0]){
-									sess.matchs.push(result[0]);
-								}
-							});
-						}
-					});
-				});
-				res.render('matches', { mail: sess.mail, type: "", muid: sess.uid });
+				mymatch = r;
 			}
 			else
 				res.redirect('/?type=error&msg=' + utf8.encode("Vous n'avez aucun matchs."));
 		});
+		_flagCheck;
+		var _flagCheck = setInterval(function() {
+			if (mymatch != null) {
+				clearInterval(_flagCheck);
+				selectMatchs();
+			}
+		}, 100); // interval set at 100 milliseconds
+		function selectMatchs()
+		{
+			mymatch.forEach(function(elem) {
+				connection.query('SELECT * FROM matchs WHERE uidlike = ? AND uidliked = ? AND mort = 0;', [elem.uidliked, sess.uid], function (err, res, fie) {
+					if (res[0])
+					{
+						connection.query('SELECT * FROM users WHERE id = ?;', [elem.uidliked], function (error, result, field) {
+							if (result[0]){
+								sess.matchs.push(result[0]);
+							}
+						});
+					}
+					done = 1;
+				});
+			});
+		}
+		_flagChecked;
+		var _flagChecked = setInterval(function() {
+			if (done == 1) {
+				clearInterval(_flagChecked);
+				redirection();
+			}
+		}, 100); // interval set at 100 milliseconds
+		function redirection()
+		{
+			if (sess.matchs[0])
+				res.render('matches', { mail: sess.mail, type: "", muid: sess.uid });
+			else
+				res.redirect('/?type=error&msg=' + utf8.encode("Vous n'avez aucun matchs."));
+		}
 	}
 	else
 		res.redirect('/?type=error&msg=' + utf8.encode("Vous devez être connecté."));
@@ -310,7 +337,7 @@ app.post('/uploads', function(req, res) {
 	req.busboy.on('file', function (fieldname, file, filename) {
 		if (filename != "")
 		{
-			if (path.extname(filename) == ".jpg" || path.extname(filename) == ".png")
+			if (path.extname(filename) == ".jpg" || path.extname(filename) == ".png" || path.extname(filename) == ".jpeg")
 			{
 				pathimg = ('/uploads/img_' + sess.uid + '_' + Math.floor((1 + Math.random() * 999999)) + filename);
 				connection.query('SELECT COUNT(*) AS count FROM imgs WHERE uid = ?;', [sess.uid], function (error, results, fields) {
@@ -592,7 +619,7 @@ io.sockets.on('connection', function (socket) {
 			if (error)
 				console.error("Une erreur est survenue avec le code :  : " + error);
 		});
-		connection.query('UPDATE users SET liked = liked + 1 WHERE id = ?);', [id], function(error, results, fields) {
+		connection.query('UPDATE users SET liked = liked + 1 WHERE id = ?;', [id], function(error, results, fields) {
 			if (error)
 				console.error("Une erreur est survenue avec le code :  : " + error);
 		});
@@ -602,15 +629,15 @@ io.sockets.on('connection', function (socket) {
 		sess = sess ? sess : null;
 		await connection.query('INSERT INTO matchs (uidlike, uidliked, mort) VALUES ("' + sess.uid + '", "' + id + '", ' + 1 + ');', function(error, results, fields) {
 			if (error)
-				console.error("Une erreur est survenue avec le code :  : " + error);
+				console.error("Une erreur est survenue avec le code : " + error + " sur la 1er requette");
 		});
-		await connection.query('UPDATE users SET disliked = disliked + 1 WHERE id = ?);', [id], function(error, results, fields) {
+		await connection.query('UPDATE users SET disliked = disliked + 1 WHERE id = ?;', [id], function(error, results, fields) {
 			if (error)
-				console.error("Une erreur est survenue avec le code :  : " + error);
+				console.error("Une erreur est survenue avec le code : " + error + " sur la 2nd requette");
 		});
-		await connection.query('UPDATE matchs SET mort = 1 WHERE uidliked = ? and uidlike = ?);', [id, sess.uid], function(error, results, fields) {
+		await connection.query('UPDATE matchs SET mort = 1 WHERE uidliked = ? and uidlike = ?;', [id, sess.uid], function(error, results, fields) {
 			if (error)
-				console.error("Une erreur est survenue avec le code :  : " + error);
+				console.error("Une erreur est survenue avec le code : " + error + " sur la 3eme requette");
 		});
 	});
 

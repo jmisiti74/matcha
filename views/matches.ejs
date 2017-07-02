@@ -34,7 +34,10 @@
 									</ul>
 								</div>
 								<div class="message_write">
-									<textarea id="message-zone" class="form-control" placeholder="type a message"></textarea>
+									<textarea id="message-zone" style="display: inline-block;width: 100%;" class="form-control" placeholder="type a message"></textarea>
+									<button disabled="true" type="button" style="height: 35px;display: inline-block;width: 32%;" onclick="showProfil();" class="btn btn-success">Voir le profil</button>
+									<button disabled="true" type="button" style="height: 35px;display: inline-block;width: 32%;" onclick="lockProfil();" class="btn btn-warning">Bloquer</button>
+									<button disabled="true" type="button" style="height: 35px;display: inline-block;width: 32%;" onclick="lockProfil();" class="btn btn-danger">J'aime pas</button>
 									<div class="clearfix"></div>
 								</div>
 							</div>
@@ -52,6 +55,17 @@
 		<script>
 			var socket = io.connect('http://localhost:8888');
 			var idactuel;
+
+			function showProfil()
+			{
+				window.location.replace("/profil?fuid=" + idactuel + "");
+			}
+
+			function lockProfil()
+			{
+				socket.emit('iDontLike', idactuel);
+				window.location.replace("/matches");
+			}
 
 			function ScrollBot()
 			{
@@ -81,7 +95,7 @@
 			}, 1000);
 			socket.on('matches', function(matches) {
 				matches.forEach(function(match) {
-					$('#ulist').append('<li onclick="getMsg(this.id);" id="' + match.id + '" class="hoverstyle left clearfix">' + ((match.sexe == "H") ? '<span class="chat-img pull-left"><img height="31" width="31" src="logoh.png" alt="User Avatar" class="img-circle">' : '<span class="chat-img pull-left"><img height="31" width="31" src="logof.png" alt="User Avatar" class="img-circle">') + '</span><div class="chat-body clearfix"><div class="header_sec"><strong class="primary-font">' + match.firstname + ' ' + match.name + '</strong> <span class="couunntt badge"></span></div></div></li>');
+					$('#ulist').append('<li onclick="getMsg(this.id);" id="' + match.id + '" class="hoverstyle left clearfix">' + ((match.sexe == "H") ? '<span class="chat-img pull-left"><img height="31" onclick="showProfil();" width="31" src="logoh.png" alt="User Avatar" class="img-circle">' : '<span class="chat-img pull-left"><img height="31" onclick="showProfil();" width="31" src="logof.png" alt="User Avatar" class="img-circle">') + '</span><div class="chat-body clearfix"><div class="header_sec"><strong class="primary-font">' + match.firstname + ' ' + match.name + '</strong> <span class="couunntt badge"></span></div></div></li>');
 					socket.emit("nvxMsg", match.id);
 				});
 			});
@@ -151,6 +165,7 @@
 				$('.hoverstyle').css("background", "");
 				$('#' + id).css("background", "#428bca none repeat scroll 0 0");
 				idactuel = id;
+				$('.btn').removeAttr('disabled');
 				socket.emit('needChat', id);
 			}
 		</script>
