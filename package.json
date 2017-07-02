@@ -14,6 +14,7 @@
     "nodemailer": "^4.0.1",
     "nodemailer-direct-transport": "^3.3.2",
     "nodemon": "^1.11.0",
+    "passport-google-oauth": "^1.0.0",
     "password-generator": "^2.1.0",
     "path": "^0.12.7",
     "socket.io": "~1.7.3",

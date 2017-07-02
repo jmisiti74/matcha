@@ -20,6 +20,10 @@
 					<% if (tag.length > 1) { %><span class="badge">#<%= tag %></span><% } %>
 				<% }); %>
 				</p></p>
+				<% if (mail != pmail) { %>
+					<button id="dislike" style="" type="button" class="btn btn-danger">J'aime pas</button>
+					<button id="like" style="" type="button" class="btn btn-success">J'aime</button>
+				<% } %>
 				<div class="gallery">
 					<h2>Images :</h2>
 					<div class="container">
@@ -162,6 +166,15 @@
 				socket.emit('didIChat');
 			}
 			setInterval(askMatchs, 5000);
+
+			$("#like").click(function () {
+				socket.emit('iLike', <%= pid %>);
+				window.location.replace("/search");
+			});
+			$("#dislike").click(function () {
+				socket.emit('iDontLike', <%= pid %>);
+				window.location.replace("/search");
+			});
 
 			socket.on('chated', function(count) {
 				if (count > 0) {

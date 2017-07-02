@@ -4,7 +4,7 @@ var http		= require('http'),
 	express		= require('express'),
 	session		= require('express-session'),
 	bodyParser	= require('body-parser'),
-	router		= express.Router();
+	router		= express.Router(),
 	app			= express(),
 	http		= require('http'),
 	utf8		= require('utf8'),
@@ -60,7 +60,7 @@ connection.query('CREATE TABLE IF NOT EXISTS tags(id INT AUTO_INCREMENT PRIMARY 
 	else
 		console.log("\033[0;32mTable tags crée.");
 });
-connection.query('CREATE TABLE IF NOT EXISTS matchs(id INT AUTO_INCREMENT PRIMARY KEY NOT NULL, uidlike INT NOT NULL, uidliked INT NOT NULL);', function (error, results, fields) {
+connection.query('CREATE TABLE IF NOT EXISTS matchs(id INT AUTO_INCREMENT PRIMARY KEY NOT NULL, uidlike INT NOT NULL, uidliked INT NOT NULL, mort INT DEFAULT 0);', function (error, results, fields) {
 	if (error)
 		throw error;
 	else
@@ -142,10 +142,10 @@ app.get('/matches', function(req, res) {
 	sess.matchs = new Array();
 	if (sess && sess.mail)
 	{
-		connection.query('SELECT * FROM matchs WHERE uidlike = ?;', [sess.uid], function (e, r, f) {
+		connection.query('SELECT * FROM matchs WHERE uidlike = ? AND mort = 0;', [sess.uid], function (e, r, f) {
 			if (r[0]) {
 				r.forEach(function(elem) {
-					connection.query('SELECT * FROM matchs WHERE uidlike = ? AND uidliked = ?;', [elem.uidliked, sess.uid], function (err, res, fie) {
+					connection.query('SELECT * FROM matchs WHERE uidlike = ? AND uidliked = ? AND mort = 0;', [elem.uidliked, sess.uid], function (err, res, fie) {
 						if (res[0])
 						{
 							connection.query('SELECT * FROM users WHERE id = ?;', [elem.uidliked], function (error, result, field) {
@@ -174,9 +174,24 @@ app.get('/profil/me', function(req, res) {
 		res.redirect('/?type=error&msg=' + utf8.encode("Vous devez être connecté."));
 });
 
-app.get('/score', function(req, res) {
+app.get('/score', async function(req, res) {
 	sess = sess ? sess : req.session;
-	res.render('score', { mail: sess.mail, type: "", score: sess.score });
+	var liked;
+	var disliked;
+	if (sess && sess.mail)
+	{
+		await connection.query('SELECT * FROM users WHERE id = ?', [sess.uid], function(error, results, fields) {
+			if (results[0]) {
+				liked = results[0].liked;
+				disliked = results[0].disliked;
+				if (liked + disliked == 0)
+					liked = disliked = 1;
+				res.render('score', { mail: sess.mail, type: "", score: ((liked / (liked + disliked)) * 10) });
+			}
+		});
+	}
+	else
+		res.redirect('/?type=error&msg=' + utf8.encode("Vous devez être connecté."));
 });
 
 // Profil, page de profil de l'utilisateur demandé
@@ -220,16 +235,16 @@ app.get('/profil', function(req, res) {
 							});
 						}
 						if (imgs[0] && tags[0]){
-							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, psexe: sexe, pdescription: description, ptags: tags, page: age, pimgs: imgs });
+							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, pid: passedVariable.fuid, psexe: sexe, pdescription: description, ptags: tags, page: age, pimgs: imgs });
 						}
 						else if (!imgs[0] && tags[0]) {
-							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, psexe: sexe, pdescription: description, ptags: tags, page: age, pimgs: [] });
+							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, pid: passedVariable.fuid, psexe: sexe, pdescription: description, ptags: tags, page: age, pimgs: [] });
 						}
 						else if (!imgs[0] && !tags[0]) {
-							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, psexe: sexe, pdescription: description, ptags: [], page: age, pscore: score, pimgs: [] });
+							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, pid: passedVariable.fuid, psexe: sexe, pdescription: description, ptags: [], page: age, pscore: score, pimgs: [] });
 						}
 						else {
-							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, psexe: sexe, pdescription: description, ptags: [], page: age, pimgs: imgs });
+							res.render('profil', { mail: sess.mail, type: "", pmail: mail, pfirstname: firstname, pname: name, pid: passedVariable.fuid, psexe: sexe, pdescription: description, ptags: [], page: age, pimgs: imgs });
 						}
 					});
 				});
@@ -430,7 +445,6 @@ const func = async (sess) => {
 					console.log("Error : " + error);
 				else
 				{
-			console.log("alut");
 					userlist = results;
 					userlist.forEach(function(user) {
 						if (sess.uid != user.id) {
@@ -572,50 +586,31 @@ io.sockets.on('connection', function (socket) {
 		socket.emit('matches', sess.matchs);
 	});
 
-	socket.on('iLike', function() {
-		var liked,
-			disliked,
-			score,
-			uid;
-
+	socket.on('iLike', function(id) {
 		sess = sess ? sess : null;
-		uid = socket.userid;
-		if (sess.userselected[uid]) {
-			connection.query('SELECT * FROM users WHERE id = ?', [uid], function(error, results, fields) {
-				if (results[0]) {
-					liked = results[0].liked + 1;
-					disliked = results[0].disliked;
-					score = (liked / (liked + disliked)) * 10; 
-					connection.query('UPDATE users SET liked = ?, score = ? WHERE id = ?;', [liked, score, uid] , function (error, results, fields) {
-						if (error)
-							console.log("Une erreur est survenue avec le code :  : " + error);
-					});
-				}
-			});
-			connection.query('INSERT INTO matchs (uidlike, uidliked) VALUES ("' + sess.uid + '", "' + sess.userselected[uid].id + '");', function(error, results, fields) {
-				if (error)
-					console.error("Une erreur est survenue avec le code :  : " + error);
-			});
-		}
+		connection.query('INSERT INTO matchs (uidlike, uidliked) VALUES ("' + sess.uid + '", "' + id + '");', function(error, results, fields) {
+			if (error)
+				console.error("Une erreur est survenue avec le code :  : " + error);
+		});
+		connection.query('UPDATE users SET liked = liked + 1 WHERE id = ?);', [id], function(error, results, fields) {
+			if (error)
+				console.error("Une erreur est survenue avec le code :  : " + error);
+		});
 	});
 
-	socket.on('iDontLike', function() {
-		var liked,
-			disliked,
-			score,
-			uid;
-
-		uid = socket.userid;
-		connection.query('SELECT * FROM users WHERE id = ?', [uid], function(error, results, fields) {
-			if (results[0]) {
-				liked = results[0].liked;
-				disliked = results[0].disliked + 1;
-				score = (liked / (liked + disliked)) * 10; 
-				connection.query('UPDATE users SET disliked = ?, score = ? WHERE id = ?;', [disliked, score, uid] , function (error, results, fields) {
-					if (error)
-						console.log("Une erreur est survenue avec le code :  : " + error);
-				});
-			}
+	socket.on('iDontLike', async function(id) {
+		sess = sess ? sess : null;
+		await connection.query('INSERT INTO matchs (uidlike, uidliked, mort) VALUES ("' + sess.uid + '", "' + id + '", ' + 1 + ');', function(error, results, fields) {
+			if (error)
+				console.error("Une erreur est survenue avec le code :  : " + error);
+		});
+		await connection.query('UPDATE users SET disliked = disliked + 1 WHERE id = ?);', [id], function(error, results, fields) {
+			if (error)
+				console.error("Une erreur est survenue avec le code :  : " + error);
+		});
+		await connection.query('UPDATE matchs SET mort = 1 WHERE uidliked = ? and uidlike = ?);', [id, sess.uid], function(error, results, fields) {
+			if (error)
+				console.error("Une erreur est survenue avec le code :  : " + error);
 		});
 	});
 
@@ -639,10 +634,10 @@ io.sockets.on('connection', function (socket) {
 		sess = sess ? sess : null;
 		if (sess && sess.mail)
 		{
-			connection.query('SELECT * FROM matchs WHERE uidlike = ?;', [sess.uid], function (e, r, f) {
+			connection.query('SELECT * FROM matchs WHERE uidlike = ? AND mort = 0;', [sess.uid], function (e, r, f) {
 				if (r[0]) {
 					r.forEach(function(elem) {
-						connection.query('SELECT * FROM matchs WHERE uidlike = ? AND uidliked = ?;', [elem.uidliked, sess.uid], function (err, res, fie) {
+						connection.query('SELECT * FROM matchs WHERE mort = 0 AND uidlike = ? AND uidliked = ?;', [elem.uidliked, sess.uid], function (err, res, fie) {
 							if (res[0])
 								socket.emit('matchs', ++count);
 						});
@@ -702,6 +697,12 @@ io.sockets.on('connection', function (socket) {
 				console.log("Une erreur est survenue avec le code :  : " + e);
 			else
 				socket.emit('msglst', { count: 0, uid: id });
+		});
+	});
+
+	socket.on('matchsList', function() {
+		connection.query('SELECT * FROM matchs WHERE uidlike = ?;', [sess.uid], function (e, r, f) {
+			socket.emit('takeMatchList', r);
 		});
 	});
 

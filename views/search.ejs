@@ -40,12 +40,20 @@
 
 		<script>
 			var socket = io.connect('http://localhost:8888');
-
+			var matchs = new Array();
 			askMatchs();
 			function askMatchs(){
 				socket.emit('didIMatch');
 				socket.emit('didIVisit');
 				socket.emit('didIChat');
+			}
+
+			function wait(ms){
+				var start = new Date().getTime();
+				var end = start;
+				while(end < start + ms) {
+					end = new Date().getTime();
+				}
 			}
 			setInterval(askMatchs, 5000);
 			socket.on('matchs', function(count) {
@@ -74,30 +82,47 @@
 			var uid = 0;
 			// Et on l'envoie avec le signal "petit_nouveau" (pour le différencier de "message")
 
+			socket.emit('matchsList');
+			wait(2000);
 			socket.emit('need');
+
+			socket.on('takeMatchList', function(mlist) {
+				matchs = mlist;
+			});
 			// On affiche une boîte de dialogue quand le serveur nous envoie un "message"
 			socket.on('user', function(user) {
-				uid = user.id;
-				console.log("Vous voyez l'utilisateur : " + uid);
-				$("#firstname").html(user.firstname);
-				$("#name").html(user.name);
-				$("#description").html(user.description);
-				$("#age").html("Age : " + user.age + " ans");
-				$("#img").attr('src', user.img);
-				if (user.distance < 1)
-					$("#distance").html(" | Distance : " + user.distance + "km");
+				var err = 0;
+				matchs.forEach(function(match) {
+					if (user.id == match.uidliked)
+						err = 1;
+				});
+				if (err == 0) {
+					uid = user.id;
+					console.log("Vous voyez l'utilisateur : " + uid);
+					$("#firstname").html(user.firstname);
+					$("#name").html(user.name);
+					$("#description").html(user.description);
+					$("#age").html("Age : " + user.age + " ans");
+					$("#img").attr('src', user.img);
+					if (user.distance == null)
+						user.distance = 0;
+					if (user.distance < 1)
+						$("#distance").html(" | Distance : " + user.distance + "km");
+					else
+						$("#distance").html(" | Distance : " + user.distance + "m");
+				}
 				else
-					$("#distance").html(" | Distance : " + user.distance + "m");
+					socket.emit('need');
 			})
 			$("#link").click(function () {
 				window.location.replace("/profil?fuid=" + uid);
 			});
 			$("#like").click(function () {
-				socket.emit('iLike');
+				socket.emit('iLike', uid);
 				socket.emit('need');
 			});
 			$("#dislike").click(function () {
-				socket.emit('iDontLike');
+				socket.emit('iDontLike', uid);
 				socket.emit('need');
 			});
 			socket.on('noMoreUser', function() {

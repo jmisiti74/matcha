@@ -60,6 +60,14 @@
 				}, 1500);
 			}
 
+			function wait(ms){
+				var start = new Date().getTime();
+				var end = start;
+				while(end < start + ms) {
+					end = new Date().getTime();
+				}
+			}
+
 			function wishSexe(sendersexe)
 			{
 				if (sendersexe == "F")
@@ -81,7 +89,6 @@
 			socket.on('msglst', function (params)
 			{
 				$('#' + params.uid + " .couunntt").html(params.count);
-				console.log('#' + params.uid + ".couunntt");
 			});
 
 			$("#message-zone").focus(function() {
@@ -93,7 +100,7 @@
 					if ($("#message-zone").val() != "" && idactuel)
 					{
 						socket.emit('newMsg', { receiver: idactuel, msg: $("#message-zone").val() });
-						$("#message-zone").val('').blur();
+						$("#message-zone").val("").blur();
 						socket.emit('needChat', idactuel);
 						ScrollBot();
 					}
@@ -121,6 +128,7 @@
 							$("#chat_zone").append('<li class="left clearfix admin_chat"><b>' + message.sendername + '</b><span class="chat-img1 pull-right"><img src="' + wishSexe(message.sendersexe) + '" alt="User Avatar" class="img-circle"><br /></span><div class="chat-body1 clearfix"><p>' + message.message + '</p><div class="chat_time pull-left">' + moment(d, "YYYY-MM-DD hh:mm:ss").fromNow() + '</div></div></li>');
 					});
 					ScrollBot();
+					$("#message-zone").focus();
 				}
 			});
 			askMatchs();
@@ -140,6 +148,8 @@
 			setInterval(askMatchs, 5000);
 			function getMsg(id)
 			{
+				$('.hoverstyle').css("background", "");
+				$('#' + id).css("background", "#428bca none repeat scroll 0 0");
 				idactuel = id;
 				socket.emit('needChat', id);
 			}
